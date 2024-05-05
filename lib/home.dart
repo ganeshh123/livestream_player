@@ -1,7 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:livestream_player/live_stream.dart';
 import 'package:livestream_player/live_stream_storage.dart';
+import 'package:livestream_player/lsp_icon_button.dart';
 import 'package:video_player/video_player.dart';
 
 class Home extends StatefulWidget {
@@ -56,6 +59,34 @@ class _HomeState extends State<Home> {
   void _deleteStream(LiveStream stream) async {
     await LiveStreamStorage.deleteLivestream(stream);
     _loadStreams(); // Refresh the list after deleting
+  }
+
+  void _exportStreams() async {
+    String? exportedFile = await LiveStreamStorage.exportLivestreamsToFile();
+    if (exportedFile == null) {
+      return;
+    }
+    // Show success snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Livestreams exported to $exportedFile'),
+      ),
+    );
+  }
+
+  void _importStreams() async {
+    String? importedFile = await LiveStreamStorage.importLivestreams();
+    if (importedFile == null) {
+      return;
+    }
+
+    _loadStreams();
+    // Show success snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Livestreams imported from $importedFile'),
+      ),
+    );
   }
 
   void _showAddStreamDialog() {
@@ -238,18 +269,25 @@ class _HomeState extends State<Home> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        if (videoReady) ...[
-                          // Stop Button
-                          IconButton(
-                            onPressed: () {},
-                            iconSize: 48,
-                            icon: const Icon(Icons.stop_rounded),
+                        // Import Live Streams Button
+
+                        LSPIconButton(
+                          icon: Icons.upload_file_rounded,
+                          label: 'Import Streams',
+                          onTap: _importStreams,
+                        ),
+                        if (_streams.isNotEmpty) ...[
+                          // Export Live Streams Button
+                          LSPIconButton(
+                            icon: Icons.upload_file_rounded,
+                            label: 'Export Streams',
+                            onTap: _exportStreams,
                           ),
                         ],
-                        IconButton(
-                          onPressed: _showAddStreamDialog,
-                          iconSize: 48,
-                          icon: const Icon(Icons.add_rounded),
+                        LSPIconButton(
+                          icon: Icons.add_rounded,
+                          label: 'Add Stream',
+                          onTap: _showAddStreamDialog,
                         ),
                       ],
                     )

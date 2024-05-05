@@ -33,6 +33,7 @@ dependencies:
   shared_preferences: ^2.2.3
   chewie:
   video_player: ^2.8.2
+  file_picker: ^8.0.3
 
 dependency_overrides:
   chewie:
