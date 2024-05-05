@@ -34,20 +34,31 @@ class _HomeState extends State<Home> {
   }
 
   void _openStream(String url) async {
-    setState(() {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(url));
-    });
-    await _controller!.initialize();
-
-    setState(() {
-      _chewieController = ChewieController(
-        videoPlayerController: _controller!,
-        isLive: true,
-        autoPlay: true,
-        showOptions: false,
-        allowPlaybackSpeedChanging: false,
+    try {
+      setState(() {
+        _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      });
+      await _controller!.initialize();
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: _controller!,
+          isLive: true,
+          autoPlay: true,
+          showOptions: false,
+          allowPlaybackSpeedChanging: false,
+        );
+      });
+    } catch (e) {
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('An error occurred while loading the stream: $e',
+              style: const TextStyle(color: Colors.white)),
+        ),
       );
-    });
+      return;
+    }
   }
 
   void _addNewStream(String name, String url) async {
@@ -200,52 +211,30 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    // Screen Width
+    double screenWidth = MediaQuery.of(context).size.width;
+
     bool videoReady = _controller != null && _chewieController != null;
+    bool wideLayout = screenWidth > 600;
 
     return Scaffold(
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.background,
-          title: const Text("Livestream Player",
+          title: const Text("Live Stream Player",
               style: TextStyle(color: Colors.white)),
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Flex(
-            direction: Axis.horizontal,
+            direction: wideLayout ? Axis.horizontal : Axis.vertical,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _streams
-                        .map((stream) => InkWell(
-                              onTap: () => _openStream(stream.url),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        stream.name,
-                                        style: const TextStyle(fontSize: 24),
-                                      ),
-                                    ),
-                                    IconButton(
-                                        onPressed: () =>
-                                            _showDeleteConfirmation(stream),
-                                        icon: const Icon(Icons.clear_rounded))
-                                  ],
-                                ),
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                ),
-              ),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 800),
                 child: Column(
+                  crossAxisAlignment: wideLayout
+                      ? CrossAxisAlignment.center
+                      : CrossAxisAlignment.start,
                   children: [
                     AspectRatio(
                       aspectRatio: 16 / 9,
@@ -254,7 +243,7 @@ class _HomeState extends State<Home> {
                         elevation: 4,
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.symmetric(vertical: 2),
                           child: videoReady
                               ? Chewie(
                                   controller: _chewieController!,
@@ -266,11 +255,18 @@ class _HomeState extends State<Home> {
                     const SizedBox(
                       height: 30,
                     ),
-                    Row(
+                    Flex(
+                      direction: wideLayout ? Axis.horizontal : Axis.vertical,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Add Stream Button
+                        LSPIconButton(
+                          icon: Icons.add_rounded,
+                          label: 'Add Stream',
+                          onTap: _showAddStreamDialog,
+                        ),
                         // Import Live Streams Button
-
                         LSPIconButton(
                           icon: Icons.download_rounded,
                           label: 'Import Streams',
@@ -284,16 +280,50 @@ class _HomeState extends State<Home> {
                             onTap: _exportStreams,
                           ),
                         ],
-                        LSPIconButton(
-                          icon: Icons.add_rounded,
-                          label: 'Add Stream',
-                          onTap: _showAddStreamDialog,
-                        ),
                       ],
                     )
                   ],
                 ),
-              )
+              ),
+              if (wideLayout == false) ...[const Divider()],
+              if (wideLayout == true) ...[
+                const SizedBox(
+                  width: 20,
+                )
+              ],
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                      vertical: wideLayout == true ? 0.0 : 10),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _streams
+                          .map((stream) => InkWell(
+                                onTap: () => _openStream(stream.url),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          stream.name,
+                                          style: const TextStyle(fontSize: 24),
+                                        ),
+                                      ),
+                                      IconButton(
+                                          onPressed: () =>
+                                              _showDeleteConfirmation(stream),
+                                          icon: const Icon(Icons.clear_rounded))
+                                    ],
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ));
