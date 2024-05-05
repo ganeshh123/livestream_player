@@ -1,6 +1,8 @@
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:livestream_player/live_stream.dart';
 import 'package:livestream_player/live_stream_storage.dart';
+import 'package:video_player/video_player.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,6 +13,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   List<LiveStream> _streams = [];
+  VideoPlayerController? _controller;
+  ChewieController? _chewieController;
 
   @override
   void initState() {
@@ -26,7 +30,22 @@ class _HomeState extends State<Home> {
     });
   }
 
-  void _openStream(String url) async {}
+  void _openStream(String url) async {
+    setState(() {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    });
+    await _controller!.initialize();
+
+    setState(() {
+      _chewieController = ChewieController(
+        videoPlayerController: _controller!,
+        isLive: true,
+        autoPlay: true,
+        showOptions: false,
+        allowPlaybackSpeedChanging: false,
+      );
+    });
+  }
 
   void _addNewStream(String name, String url) async {
     final livestream = LiveStream(name: name, url: url);
@@ -143,67 +162,102 @@ class _HomeState extends State<Home> {
   }
 
   @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    bool videoReady = _controller != null && _chewieController != null;
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        title: const Text("Livestream Player",
-            style: TextStyle(color: Colors.white)),
-      ),
-      body: Flex(
-        direction: Axis.horizontal,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _streams
-                    .map((stream) => InkWell(
-                          onTap: () => _openStream(stream.url),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    stream.name,
-                                    style: const TextStyle(fontSize: 24),
-                                  ),
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.background,
+          title: const Text("Livestream Player",
+              style: TextStyle(color: Colors.white)),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Flex(
+            direction: Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _streams
+                        .map((stream) => InkWell(
+                              onTap: () => _openStream(stream.url),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        stream.name,
+                                        style: const TextStyle(fontSize: 24),
+                                      ),
+                                    ),
+                                    IconButton(
+                                        onPressed: () =>
+                                            _showDeleteConfirmation(stream),
+                                        icon: const Icon(Icons.clear_rounded))
+                                  ],
                                 ),
-                                IconButton(
-                                    onPressed: () =>
-                                        _showDeleteConfirmation(stream),
-                                    icon: const Icon(Icons.clear_rounded))
-                              ],
-                            ),
-                          ),
-                        ))
-                    .toList(),
-              ),
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Material(
-                    color: Colors.amber,
+                              ),
+                            ))
+                        .toList(),
                   ),
-                )
-              ],
-            ),
-          )
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddStreamDialog,
-        tooltip: 'Add Stream',
-        child: const Icon(Icons.add),
-      ),
-    );
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Material(
+                        color: Colors.black,
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: videoReady
+                              ? Chewie(
+                                  controller: _chewieController!,
+                                )
+                              : Container(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (videoReady) ...[
+                          // Stop Button
+                          IconButton(
+                            onPressed: () {},
+                            iconSize: 48,
+                            icon: const Icon(Icons.stop_rounded),
+                          ),
+                        ],
+                        IconButton(
+                          onPressed: _showAddStreamDialog,
+                          iconSize: 48,
+                          icon: const Icon(Icons.add_rounded),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              )
+            ],
+          ),
+        ));
   }
 }
