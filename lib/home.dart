@@ -272,14 +272,14 @@ class _HomeState extends State<Home> {
                         // Import Live Streams Button
 
                         LSPIconButton(
-                          icon: Icons.upload_file_rounded,
+                          icon: Icons.download_rounded,
                           label: 'Import Streams',
                           onTap: _importStreams,
                         ),
                         if (_streams.isNotEmpty) ...[
                           // Export Live Streams Button
                           LSPIconButton(
-                            icon: Icons.upload_file_rounded,
+                            icon: Icons.upload_rounded,
                             label: 'Export Streams',
                             onTap: _exportStreams,
                           ),
