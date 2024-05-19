@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:livestream_player/live_stream.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LiveStreamStorage {
@@ -14,6 +15,13 @@ class LiveStreamStorage {
   static Future<List<LiveStream>> getLiveStreams() async {
     List<String> streamList = _prefs?.getStringList('livestreams') ?? [];
     return streamList.map((e) => LiveStream.fromJson(json.decode(e))).toList();
+  }
+
+  static Future<void> requestStoragePermission() async {
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      await Permission.storage.request();
+    }
   }
 
   static Future<void> addLiveStream(LiveStream liveStream) async {
@@ -32,6 +40,14 @@ class LiveStreamStorage {
   }
 
   static Future<String?> exportLivestreamsToFile() async {
+    // Request storage permissions
+    await requestStoragePermission();
+    // Check if permission is granted
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      return null;
+    }
+
     // Fetching the livestream data
     List<LiveStream> streams = await getLiveStreams();
     String jsonText =
@@ -51,9 +67,16 @@ class LiveStreamStorage {
   }
 
   static Future<String?> importLivestreams() async {
+    // Request storage permissions
+    await requestStoragePermission();
+    // Check if permission is granted
+    var status = await Permission.storage.status;
+    if (!status.isGranted) {
+      return null;
+    }
+
     FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
+      type: FileType.any,
     );
 
     if (result == null) {
